@@ -4,7 +4,7 @@ internal sealed partial class MainForm : Form
 {
     private const int ManualMovementDelayMs = 2000;
     private const int MouseClickDelayMs = 230;
-    private const string ArmedMessage = "Cursor pelo olhar. Ctrl + Alt + F12 devolve o controle manual.";
+    private const string ArmedMessage = "Cursor pelo olhar. Ctrl + Alt + F10 devolve o controle manual.";
     private const string ManualMovementMessage = "Mouse em uso. O olhar retoma após 2 segundos sem movimento.";
     private const string WaitingForGazeMessage = "Sinal do olhar instável. Aguardando retorno automático…";
 
@@ -157,7 +157,7 @@ internal sealed partial class MainForm : Form
     {
         base.OnHandleCreated(e);
         DashboardStyle.SetWindowColors(Handle);
-        emergencyRegistered = Native.RegisterShortcut(Handle, Native.EmergencyId, Keys.F12);
+        emergencyRegistered = Native.RegisterShortcut(Handle, Native.EmergencyId, Keys.F10);
         clickShortcutRegistered = Native.RegisterShortcut(Handle, Native.ToggleGazeClickId, Keys.F11);
         if (!clickShortcutRegistered)
             clickStatus.Text = "Ctrl + Alt + F11 indisponível. Use o seletor Modo.";
@@ -238,7 +238,7 @@ internal sealed partial class MainForm : Form
             ValidGaze(Environment.TickCount64) == null)
         {
             controlStatus.Text = demo.Checked ? "Desative a demonstração para assumir o cursor." :
-                !emergencyRegistered ? "Atalho ocupado. Libere Ctrl + Alt + F12 e reabra o GazeMagnet." :
+                !emergencyRegistered ? "Atalho ocupado. Libere Ctrl + Alt + F10 e reabra o GazeMagnet." :
                 !confirmed.Checked ? "Confirme a calibração e desligue o controle nativo do mouse." :
                 "Aguarde coordenadas válidas da API antes de assumir o cursor.";
             return;

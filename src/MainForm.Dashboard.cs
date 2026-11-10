@@ -6,7 +6,7 @@ internal sealed partial class MainForm
 {
     private readonly Panel viewport = new() { Dock = DockStyle.Fill, AutoScroll = true };
     private readonly Panel dashboardPage = new() { Margin = Padding.Empty };
-    private readonly DashboardButton emergency = new(DashboardGlyph.Alert, true, "Ctrl + Alt + F12")
+    private readonly DashboardButton emergency = new(DashboardGlyph.Alert, true, "Ctrl + Alt + F10")
     {
         Text = "Parada de emergência",
         Font = DashboardStyle.Action,
@@ -123,7 +123,7 @@ internal sealed partial class MainForm
         connect.TextChanged += (_, _) => UpdateButtonHelp();
         arm.TextChanged += (_, _) => UpdateButtonHelp();
         UpdateButtonHelp();
-        buttonHelp.SetToolTip(emergency, "Interrompe o controle e o clique pelo olhar. Atalho Ctrl + Alt + F12.");
+        buttonHelp.SetToolTip(emergency, "Interrompe o controle e o clique pelo olhar. Atalho Ctrl + Alt + F10.");
         Deactivate += (_, _) => fieldHelp.Hide(this);
         Disposed += (_, _) =>
         {
