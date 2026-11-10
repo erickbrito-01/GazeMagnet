@@ -1,52 +1,54 @@
 # GazeMagnet 0.7.17
 
-MVP em C# para Windows 11. O GazePointer usa a câmera e fornece as coordenadas. O GazeMagnet encontra controles na janela visível sob o olhar, destaca o alvo e move o cursor quando você assume o controle. Você pode clicar manualmente ou habilitar o clique pelo olhar.
+O GazeMagnet é um projeto experimental de acessibilidade para Windows 11. O GazePointer rastreia o olhar com a webcam, e o GazeMagnet identifica e destaca controles próximos. Você pode escolher entre [controle pela API](#usar-com-a-api) e [encaixe no cursor nativo do GazePointer](#usar-sem-api).
 
 ## Rodar no Windows 11
 
-Abra **GazeMagnet.exe**. O executável é para Windows x64 e usa o **.NET 10 Desktop Runtime**. Ele já está disponível no computador usado para testar. Em outro computador, se o Windows pedir o runtime, baixe o **Desktop Runtime x64** na [página oficial do .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0).
+Baixe **GazeMagnet.exe** na [release mais recente](https://github.com/erickbrito-01/GazeMagnet/releases/latest). Para usar o olhar, tenha uma webcam e o [GazePointer](https://sourceforge.net/projects/gazepointer/) instalado. Em um PC Windows 11 x64, instale o [.NET 10 Desktop Runtime x64](https://dotnet.microsoft.com/download/dotnet/10.0) caso ainda não esteja disponível. Abra o executável diretamente.
 
 O painel escuro organiza a janela em **Conexão**, **Magnetismo**, **Clique pelo olhar** e **Controle do cursor**. A barra inferior mostra os estados da API, do cursor e da fixação. Em janelas estreitas, os painéis ficam em uma coluna com rolagem. O botão **Parada de emergência** executa a mesma ação do atalho indicado no painel. O padrão é **Ctrl + Alt + F10**.
 
-Com o controle pausado, use **Alterar atalho** para selecionar a combinação. Se o Windows recusar a nova combinação, a anterior continua ativa. Na próxima abertura, se o atalho salvo estiver ocupado, o programa tenta o padrão temporariamente. Se os dois estiverem indisponíveis, o controle fica pausado e você pode escolher outra combinação.
+### Configurar o atalho de emergência
+
+Com o controle pausado, abra **4. Controle do cursor → Alterar atalho**. Selecione os modificadores e a tecla final e clique em **Aplicar**. As teclas **F1 a F11** precisam de Ctrl ou Alt. Para letras e números, use **Ctrl + Shift** ou **Alt + Shift**. **Ctrl + Alt + F11** já é usado pelo clique pelo olhar.
+
+Se o Windows recusar a nova combinação, a anterior continua ativa. Na próxima abertura, se o atalho salvo estiver ocupado, o programa tenta o padrão temporariamente e mostra qual está em uso. Se os dois estiverem indisponíveis, o controle fica pausado e você pode escolher outra combinação no painel.
 
 Pare o mouse sobre o **?** ao lado de um campo ou interruptor para ler a dica. Ela fecha quando o mouse sai do ícone. Passe o mouse sobre um botão de ação para ver o que ele faz.
 
 ### Configurações salvas
 
-Ao fechar o aplicativo normalmente, o GazeMagnet salva os ajustes de magnetismo e clique, as opções de visualização e os dados de conexão manual em `%LOCALAPPDATA%\GazeMagnet\settings.json`. O Windows protege a chave da API para que só a mesma conta consiga recuperá-la. Ao reabrir, a conexão e o cursor são ativados manualmente. O último modo de clique fica disponível em **Ctrl + Alt + F11**, com o clique desligado na abertura.
+Ao fechar o aplicativo normalmente, o GazeMagnet salva a fonte da posição, os ajustes de magnetismo e clique, as opções de visualização e os dados de conexão manual em `%LOCALAPPDATA%\GazeMagnet\settings.json`. O atalho de emergência é salvo assim que o Windows aceita a troca. O Windows protege a chave da API para que só a mesma conta consiga recuperá-la. Ao reabrir, o controle começa pausado. No modo com API, a conexão é iniciada manualmente e **Ctrl + Alt + F11** pode recuperar o último modo de clique.
 
 ### Experimentar sem a câmera
 
 1. Marque **Demonstração com mouse (apenas destaque)**.
-2. Aproxime o mouse de um botão, por exemplo **Conectar**. O contorno amarelo tracejado indica um candidato. Ao manter a posição pelo tempo de fixação, o contorno fica verde.
+2. Aproxime o mouse de um botão visível. O contorno amarelo tracejado indica um candidato. Ao manter a posição pelo tempo de fixação, o contorno fica verde.
 3. Afaste o mouse ou aponte para outro controle. Ajuste raio, fixação e histerese para sentir a diferença. A demonstração mantém o cursor sob seu controle manual.
 
 ### Visualizar a área de busca
 
-Em **2. Magnetismo**, marque **Mostrar área de busca e mira**. Com o magnetismo ligado, o círculo azul mostra o raio para encontrar novos alvos. A mira mostra a coordenada usada na busca: o ponto do olhar quando você assume o cursor, ou a posição do mouse no modo de demonstração. Mude **Raio (px)** para aumentar ou reduzir o círculo.
+Em **2. Magnetismo**, marque **Mostrar área de busca e mira**. O círculo azul mostra o raio usado para encontrar novos alvos. A mira indica a posição que alimenta a busca. Com API, é o ponto do olhar. Sem API, vem do cursor movido pelo GazePointer. Na demonstração, acompanha o mouse. Use **Raio (px)** para alterar o tamanho do círculo.
 
 O GazeMagnet procura na janela visível sob a mira. Um controle pode virar candidato se a sua borda alcançar o círculo, mesmo com o centro do controle fora dele. O contorno amarelo continua indicando um candidato e o verde, um alvo fixado. A histerese pode manter um alvo fixado além do círculo.
 
 Enquanto o candidato continuar no círculo, a contagem para fixar segue mesmo que outro botão passe sob a mira. Se o candidato sair do círculo, outro pode começar a contar. Em controles aninhados, mirar diretamente no botão de dentro ou fora dele pode mudar a escolha. Durante uma troca, voltar a mirar no alvo fixado cancela a troca.
 
-A visualização começa desligada. Com o olhar, ela some quando a busca pausa, por exemplo ao perder o sinal, usar o mouse manualmente ou acionar a parada de emergência.
+A visualização vem desligada na primeira abertura. Ela some quando a busca pausa, por exemplo ao perder o sinal, usar o mouse manualmente ou acionar a parada de emergência.
 
 ### Estabilizar o olhar
 
 Em **2. Magnetismo**, ajuste **Estabilizar olhar**. O nível **Médio** é o padrão. Use **Leve** se a mira demorar a acompanhar seu olhar, **Forte** se ela ainda tremer enquanto você olha para o mesmo lugar ou **Desligado** para comparar com a leitura original.
 
-A mesma posição suavizada move o cursor livre, orienta a mira e a busca de alvos e define o círculo para o clique pelo olhar. Ao fixar, o cursor ainda vai ao centro do alvo. A demonstração com mouse continua usando a posição do ponteiro.
+A estabilização suaviza a mira e a busca de alvos. No modo com API, ela também suaviza o movimento livre e define a posição do círculo para o clique pelo olhar. No modo sem API, o GazePointer continua responsável pelo movimento livre. A demonstração com mouse usa a posição do ponteiro diretamente.
 
-### Usar com o olhar
+### Usar com a API
 
 Veja a [configuração da porta local e da chave da API](README.md#porta-local-chave-e-reconex%C3%A3o).
 
-Para usar o movimento nativo do GazePointer, veja [o modo sem API](README.md#usar-o-cursor-do-gazepointer-sem-api).
-
 1. Abra uma única instância do [GazePointer](https://sourceforge.net/projects/gazepointer/) e calibre o olhar no monitor principal.
 2. Na barra inferior do GazePointer, deixe o botão com ícone de ponteiro, **Control Mouse Cursor**, desativado. Mantenha o rastreamento ligado. Desative também o marcador de olhar pelo botão com ícone de olho. Quando esse marcador fica sobre um controle, ele pode encobrir o alvo.
-3. No GazeMagnet, desmarque a demonstração. Mantenha **Configurar conexão automaticamente** marcado e clique em **Conectar**. Se o GazePointer mostrar um pedido de acesso, revise-o e autorize a conexão se desejar.
+3. No GazeMagnet, desmarque a demonstração. Em **1. Conexão**, selecione **GazeFlowAPI** como fonte, mantenha **Configurar conexão automaticamente** marcado e clique em **Conectar**. Se o GazePointer mostrar um pedido de acesso, revise-o e autorize a conexão se desejar.
 4. Quando aparecer **API conectada · recebendo coordenadas do olhar**, marque a confirmação de calibração e controle nativo desligado. Clique em **Assumir cursor**.
 5. Olhe perto de um botão ou link e mantenha o olhar até o contorno ficar verde. O ponteiro vai para o centro do alvo. No modo padrão, entre alvos, o cursor segue as coordenadas recebidas.
 6. Para usar o mouse, mova-o normalmente. O GazeMagnet cede o controle durante o movimento e retoma sozinho após cerca de 2 segundos de repouso, assim que chegar uma amostra nova de olhar. Cada novo movimento reinicia a contagem.
@@ -62,9 +64,18 @@ Para usar o movimento nativo do GazePointer, veja [o modo sem API](README.md#usa
 
 O GazeMagnet ignora elementos expostos pelo Windows como documentos e agrupadores, como painéis e listas inteiras. Os controles individuais dentro deles continuam disponíveis. Quando o olhar cai sobre um controle menor dentro de outro alvo, o menor tem prioridade depois da fixação. Durante a troca, o clique automático no alvo anterior é cancelado. [Tipos de controle no Windows UI Automation](https://learn.microsoft.com/en-us/windows/win32/winauto/uiauto-controltypesoverview)
 
+### Usar sem API
+
+1. Calibre o olhar no GazePointer e **ligue Control Mouse Cursor**. Desligue o marcador de olhar se ele cobrir os alvos.
+2. Com o controle pausado e a API desconectada, selecione **Cursor do GazePointer (sem API)** em **1. Conexão**. Desmarque a demonstração e mantenha **Usar magnetismo** ligado.
+3. Em **4. Controle do cursor**, marque a confirmação da calibração e clique em **Ativar magnetismo**. Depois de mexer no mouse ou touchpad, aguarde cerca de dois segundos e volte a mover o ponteiro com o olhar.
+4. O GazeMagnet encaixa o ponteiro uma vez no centro de um alvo confirmado. O verde some quando o ponteiro sai do centro. Para encaixar novamente no mesmo alvo, saia da margem de histerese ou confirme outro alvo primeiro.
+
+Use cliques manuais ou **Clicar no alvo verde com Enter**. **Clique pelo olhar** e **Mover só entre alvos** exigem o modo com API. A **Parada de emergência** interrompe os encaixes. Para interromper também o movimento nativo, desligue **Control Mouse Cursor** no GazePointer.
+
 ### Mover só entre alvos
 
-Marque **Mover só entre alvos** em **2. Magnetismo**, com **Usar magnetismo** ligado.
+No modo com API, marque **Mover só entre alvos** em **2. Magnetismo**, com **Usar magnetismo** ligado.
 
 - Ao olhar entre controles, o cursor fica na posição atual. Quando surgir um alvo no raio e ele passar pela fixação, o cursor vai direto para o centro dele.
 - Enquanto um vizinho aparece em amarelo, o alvo anterior continua em verde se ainda estiver dentro da margem de histerese. Se você mirar dentro do vizinho e fora do anterior, ele pode assumir após a fixação mesmo se estiver muito perto.
@@ -75,7 +86,7 @@ Marque **Mover só entre alvos** em **2. Magnetismo**, com **Usar magnetismo** l
 
 Em **2. Magnetismo**, marque **Clicar no alvo verde com Enter**. Quando o cursor estiver sobre o alvo verde, pressione **Enter** para dar um clique esquerdo. Segurar a tecla produz um único clique. Fora de um alvo fixado e durante a troca de alvo, Enter continua funcionando normalmente. A opção começa desligada e funciona mesmo com o clique pelo olhar desligado. Dentro do painel do próprio GazeMagnet, Enter mantém sua função normal.
 
-### Clicar pelo olhar
+### Clicar pelo olhar (modo com API)
 
 1. Na seção **Clique pelo olhar**, selecione **Treino (sem clique)**. Mantenha **Usar magnetismo** ligado, desmarque a demonstração com mouse e assuma o cursor pelo olhar.
 2. Ajuste **Tempo para clicar (s)** de **0,6 a 4,0 segundos**, em passos de 0,1 s. O padrão é **1,0 segundo após a fixação**. Com a fixação padrão de 320 ms, o total nominal é de cerca de 1,3 s. A frequência das amostras e a checagem do alvo podem alongar a espera.
@@ -100,6 +111,8 @@ Se uma sessão ativa da API cair ou expirar, o GazeMagnet tenta reconectar até 
 ## Se algo falhar
 
 - **API indisponível**. Confira se o GazePointer está aberto e se a porta local é 43333. Se a câmera ou a autorização travar, feche o GazePointer por completo, abra novamente e tente conectar. A chave de demonstração do fornecedor pode ter limite de tempo e frequência.
+- **Atalho de emergência indisponível**. Com o controle pausado, use **Alterar atalho** e escolha outra combinação antes de ativar.
+- **Sem encaixe no modo sem API**. Confirme se **Control Mouse Cursor** está ligado no GazePointer e se o olhar já consegue mover o ponteiro. Depois de usar o mouse ou touchpad, aguarde dois segundos e volte a mover o ponteiro pelo olhar.
 - **Cursor voltou ao modo manual**. Uma perda do sinal por 5 segundos ou uma reconexão sem sucesso devolve o cursor ao modo manual. Confira o rastreamento e o botão **Control Mouse Cursor** antes de rearmar. O GazeMagnet exige o atalho de emergência disponível para assumir o cursor.
 - **Um controle fica sem destaque**. A detecção depende dos controles expostos ao Windows UI Automation pela janela visível sob o olhar. Ela pode estar sem foco. A seleção exige que o centro do controle esteja visível e não ativa a janela. Jogos, interfaces desenhadas em canvas, apps com privilégios elevados e alguns controles personalizados podem ficar fora da cobertura.
 - **As coordenadas parecem deslocadas**. O MVP usa coordenadas em pixels do monitor principal. Valide a calibração nessa tela. Escalas diferentes entre monitores ainda precisam de validação.
@@ -138,4 +151,5 @@ dotnet run --project .\src\GazeMagnet.csproj
 - Na versão 0.7.11, com coordenadas simuladas, um botão real recebeu foco e foi acionado com Enter. Shift + Tab moveu o foco normalmente enquanto o botão permaneceu verde. Um alvo em outra janela ficou sem foco até sua janela ficar ativa.
 - Na versão 0.7.12, o clique com Enter substituiu o foco automático. O teste no Windows confirmou um clique por pressão, inclusive no Enter numérico, e o Enter normal quando a opção está desligada ou não há alvo verde.
 - Na versão 0.7.13, uma API local de teste simulou expiração, fechamento e interrupção no envio de dados. Os testes verificaram a retomada com sinal novo, a prioridade do mouse, o modo manual, a parada de emergência, o cancelamento da conexão, a recusa de acesso e o limite de três tentativas.
-- O aviso vermelho com a webcam ainda precisa de validação presencial.
+- Na versão 0.7.16, movimentos simulados no Windows verificaram o encaixe sem API, a troca de alvo, o Enter, a prioridade do mouse e a parada de emergência. A validação com webcam e touchpad reais no notebook ficou pendente.
+- Na versão 0.7.17, os testes verificaram a troca e a persistência do atalho de emergência, conflitos, uso temporário do atalho padrão e a parada nos dois modos, incluindo o cancelamento da retomada automática.
