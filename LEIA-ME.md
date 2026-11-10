@@ -1,4 +1,4 @@
-# GazeMagnet 0.7.13
+# GazeMagnet 0.7.14
 
 MVP em C# para Windows 11. O GazePointer usa a câmera e fornece as coordenadas. O GazeMagnet encontra controles na janela visível sob o olhar, destaca o alvo e move o cursor quando você assume o controle. Você pode clicar manualmente ou habilitar o clique pelo olhar.
 
@@ -9,6 +9,10 @@ Abra **GazeMagnet.exe**. O executável é para Windows x64 e usa o **.NET 10 Des
 O painel escuro organiza a janela em **Conexão**, **Magnetismo**, **Clique pelo olhar** e **Controle do cursor**. A barra inferior mostra os estados da API, do cursor e da fixação. Em janelas estreitas, os painéis ficam em uma coluna com rolagem. O botão **Parada de emergência** executa a mesma ação de **Ctrl + Alt + F12**.
 
 Pare o mouse sobre o **?** ao lado de um campo ou interruptor para ler a dica. Ela fecha quando o mouse sai do ícone. Passe o mouse sobre um botão de ação para ver o que ele faz.
+
+### Configurações salvas
+
+Ao fechar o aplicativo normalmente, o GazeMagnet salva os ajustes de magnetismo e clique, as opções de visualização e os dados de conexão manual em `%LOCALAPPDATA%\GazeMagnet\settings.json`. O Windows protege a chave da API para que só a mesma conta consiga recuperá-la. Ao reabrir, a conexão e o cursor são ativados manualmente. O último modo de clique fica disponível em **Ctrl + Alt + F11**, com o clique desligado na abertura.
 
 ### Experimentar sem a câmera
 
@@ -56,7 +60,7 @@ O GazeMagnet ignora elementos expostos pelo Windows como documentos e agrupadore
 
 ### Mover só entre alvos
 
-Marque **Mover só entre alvos** em **Ajuste do alvo**, com **Usar magnetismo** ligado. O modo começa desligado a cada abertura.
+Marque **Mover só entre alvos** em **2. Magnetismo**, com **Usar magnetismo** ligado.
 
 - Ao olhar entre controles, o cursor fica na posição atual. Quando surgir um alvo no raio e ele passar pela fixação, o cursor vai direto para o centro dele.
 - Enquanto um vizinho aparece em amarelo, o alvo anterior continua em verde se ainda estiver dentro da margem de histerese. Se você mirar dentro do vizinho e fora do anterior, ele pode assumir após a fixação mesmo se estiver muito perto.

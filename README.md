@@ -34,6 +34,8 @@ O GazeMagnet é um projeto experimental de acessibilidade desenvolvido com ajuda
 | Estabilizar olhar | Médio | Intensidade da suavização da mira e do cursor livre. |
 | Tempo para clicar | 1,0 s | Quanto tempo o alvo precisa permanecer dentro do círculo depois de ficar verde. |
 
+Ao fechar o GazeMagnet normalmente, ele salva seus ajustes e os restaura na próxima abertura. A chave manual, se informada, fica protegida pelo Windows na sua conta. O programa abre desconectado, com o cursor manual e o clique pelo olhar desligado. O atalho **Ctrl + Alt + F11** recupera o último modo de clique que você usou.
+
 ## Porta local, chave e reconexão
 
 A configuração automática procura a porta do GazePointer no mesmo computador e usa a chave pública de teste `AppKeyDemo`. Para informar uma porta ou chave própria, desmarque **Configurar conexão automaticamente**. O endereço é `127.0.0.1`, e a porta padrão é **43333**. Se o GazePointer estiver em outra porta, confira o valor de `<port>` no arquivo `GazeStreamSettings.xml` da instalação. Use a mesma porta no GazeMagnet. [Documentação da GazeFlowAPI](https://github.com/szydej/GazeFlowAPI)

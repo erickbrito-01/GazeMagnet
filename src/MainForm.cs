@@ -47,6 +47,7 @@ internal sealed partial class MainForm : Form
     private readonly CheckBox showSearchArea = Check("Mostrar área de busca e mira");
     private readonly CheckBox enterClicksTarget = Check("Clicar no alvo verde com Enter");
     private readonly EnterClickShortcut enterClickShortcut;
+    private readonly string settingsPath;
     private readonly System.Windows.Forms.Timer timer = new() { Interval = 30 };
     private readonly TargetOverlay overlay = new();
     private readonly TargetOverlay candidateOverlay = new();
@@ -80,8 +81,13 @@ internal sealed partial class MainForm : Form
     private (Target Target, nint Window)? enterClickTarget;
     private bool enterClickPending;
 
-    public MainForm()
+    public MainForm() : this(AppSettings.DefaultPath)
     {
+    }
+
+    internal MainForm(string settingsPath)
+    {
+        this.settingsPath = settingsPath;
         enterClickShortcut = new EnterClickShortcut(TryQueueEnterClick);
         BuildDashboard();
 
@@ -138,6 +144,7 @@ internal sealed partial class MainForm : Form
         };
         maxTargetWidth.ValueChanged += (_, _) => ChangeSizeLimits();
         maxTargetHeight.ValueChanged += (_, _) => ChangeSizeLimits();
+        RestoreSettings();
         timer.Tick += (_, _) =>
         {
             Tick();
@@ -628,6 +635,11 @@ internal sealed partial class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        base.OnFormClosing(e);
+        if (e.Cancel)
+            return;
+
+        SaveSettings();
         closing = true;
         timer.Dispose();
         connection?.Cancel();
@@ -637,7 +649,6 @@ internal sealed partial class MainForm : Form
         overlay.Dispose();
         candidateOverlay.Dispose();
         searchAreaOverlay.Dispose();
-        base.OnFormClosing(e);
     }
 
     private static CheckBox Check(string text, bool value = false) =>
