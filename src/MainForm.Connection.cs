@@ -11,6 +11,9 @@ internal sealed partial class MainForm
 
     private async void ToggleConnection()
     {
+        if (UsingNativeCursor)
+            return;
+
         if (connection != null)
         {
             if (armed || resumeAfterReconnect)

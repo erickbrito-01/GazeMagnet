@@ -4,7 +4,6 @@ internal sealed partial class MainForm : Form
 {
     private const int ManualMovementDelayMs = 2000;
     private const int MouseClickDelayMs = 230;
-    private const string ArmedMessage = "Cursor pelo olhar. Ctrl + Alt + F10 devolve o controle manual.";
     private const string ManualMovementMessage = "Mouse em uso. O olhar retoma após 2 segundos sem movimento.";
     private const string WaitingForGazeMessage = "Sinal do olhar instável. Aguardando retorno automático…";
 
@@ -88,6 +87,9 @@ internal sealed partial class MainForm : Form
     internal MainForm(string settingsPath)
     {
         this.settingsPath = settingsPath;
+        AppSettings settings = AppSettings.Load(settingsPath);
+        if (settings.EmergencyShortcut is { } shortcut && shortcut.IsAllowed())
+            preferredEmergencyShortcut = shortcut;
         enterClickShortcut = new EnterClickShortcut(TryQueueEnterClick);
         BuildDashboard();
 
@@ -95,6 +97,7 @@ internal sealed partial class MainForm : Form
         clickTime.ValueChanged += (_, _) => CancelGazeClick();
 
         autoConnection.CheckedChanged += (_, _) => ChangeConnectionMode();
+        cursorSourceChoice.SelectedIndexChanged += (_, _) => ChangeCursorSource();
         RefreshConnectionFields();
         connect.Click += (_, _) => ToggleConnection();
         arm.Click += (_, _) => ToggleControl();
@@ -107,13 +110,15 @@ internal sealed partial class MainForm : Form
         demo.CheckedChanged += (_, _) =>
         {
             Pause(demo.Checked ? "Demonstração ativa. Mova o mouse perto de um botão." : "Cursor manual.");
-            targetsOnly.Enabled = magnetic.Checked && !demo.Checked;
+            targetsOnly.Enabled = !UsingNativeCursor && magnetic.Checked && !demo.Checked;
             if (demo.Checked)
                 confirmed.Checked = false;
         };
         magnetic.CheckedChanged += (_, _) =>
         {
-            targetsOnly.Enabled = magnetic.Checked && !demo.Checked;
+            targetsOnly.Enabled = !UsingNativeCursor && magnetic.Checked && !demo.Checked;
+            if (UsingNativeCursor && armed && !magnetic.Checked)
+                Pause("Magnetismo pausado. O GazePointer controla o cursor.");
             if (!magnetic.Checked)
                 searchAreaOverlay.Clear();
             ResetTarget();
@@ -144,7 +149,7 @@ internal sealed partial class MainForm : Form
         };
         maxTargetWidth.ValueChanged += (_, _) => ChangeSizeLimits();
         maxTargetHeight.ValueChanged += (_, _) => ChangeSizeLimits();
-        RestoreSettings();
+        RestoreSettings(settings);
         timer.Tick += (_, _) =>
         {
             Tick();
@@ -157,16 +162,18 @@ internal sealed partial class MainForm : Form
     {
         base.OnHandleCreated(e);
         DashboardStyle.SetWindowColors(Handle);
-        emergencyRegistered = Native.RegisterShortcut(Handle, Native.EmergencyId, Keys.F10);
+        RestoreEmergencyRegistration();
         clickShortcutRegistered = Native.RegisterShortcut(Handle, Native.ToggleGazeClickId, Keys.F11);
-        if (!clickShortcutRegistered)
+        if (!clickShortcutRegistered && !UsingNativeCursor)
             clickStatus.Text = "Ctrl + Alt + F11 indisponível. Use o seletor Modo.";
     }
 
     protected override void OnHandleDestroyed(EventArgs e)
     {
+        if (rawMouseRegistered)
+            Pause("Magnetismo pausado. Ative novamente para continuar.");
         if (emergencyRegistered)
-            Native.UnregisterShortcut(Handle, Native.EmergencyId);
+            Native.UnregisterShortcut(Handle, emergencyShortcutId);
         if (clickShortcutRegistered)
             Native.UnregisterShortcut(Handle, Native.ToggleGazeClickId);
         clickShortcutRegistered = false;
@@ -176,13 +183,17 @@ internal sealed partial class MainForm : Form
 
     protected override void WndProc(ref Message message)
     {
-        if (message.Msg == Native.HotKeyMessage && message.WParam == Native.EmergencyId)
+        if (message.Msg == RawMouseInput.Message && rawMouseRegistered && RawMouseInput.IsMovement(message.LParam))
+            physicalHoldUntil = Environment.TickCount64 + ManualMovementDelayMs;
+        if (message.Msg == Native.HotKeyMessage && emergencyRegistered && message.WParam == emergencyShortcutId)
         {
             EmergencyStop();
             return;
         }
         if (message.Msg == Native.HotKeyMessage && message.WParam == Native.ToggleGazeClickId)
         {
+            if (UsingNativeCursor)
+                return;
             clickMode.SelectedIndex = (int)(CurrentClickMode == GazeClickMode.Off
                 ? lastClickMode : GazeClickMode.Off);
             return;
@@ -195,7 +206,8 @@ internal sealed partial class MainForm : Form
         clickMode.SelectedIndex = (int)GazeClickMode.Off;
         demo.Checked = false;
         confirmed.Checked = false;
-        Pause("Emergência acionada. O cursor voltou ao controle manual.");
+        Pause(UsingNativeCursor ? "Emergência acionada. Magnetismo pausado. O GazePointer ainda pode mover o cursor."
+            : "Emergência acionada. O cursor voltou ao controle manual.");
         RefreshDashboard();
     }
 
@@ -222,8 +234,11 @@ internal sealed partial class MainForm : Form
 
     private void RefreshConnectionFields()
     {
-        autoConnection.Enabled = connection == null;
-        port.Enabled = key.Enabled = connection == null && !autoConnection.Checked;
+        cursorSourceChoice.Enabled = !armed && connection == null;
+        autoConnection.Enabled = !UsingNativeCursor && connection == null;
+        port.Enabled = key.Enabled = !UsingNativeCursor && connection == null && !autoConnection.Checked;
+        autoConnection.Visible = connect.Visible = !UsingNativeCursor;
+        port.Parent!.Visible = key.Parent!.Visible = !UsingNativeCursor;
         key.UseSystemPasswordChar = !autoConnection.Checked;
     }
 
@@ -231,14 +246,19 @@ internal sealed partial class MainForm : Form
     {
         if (armed || resumeAfterReconnect)
         {
-            Pause("Pausado. Cursor manual.");
+            Pause(UsingNativeCursor ? "Magnetismo pausado. O GazePointer controla o cursor." : "Pausado. Cursor manual.");
+            return;
+        }
+        if (UsingNativeCursor)
+        {
+            ArmNativeCursor();
             return;
         }
         if (demo.Checked || !emergencyRegistered || !confirmed.Checked || !authorized ||
             ValidGaze(Environment.TickCount64) == null)
         {
             controlStatus.Text = demo.Checked ? "Desative a demonstração para assumir o cursor." :
-                !emergencyRegistered ? "Atalho ocupado. Libere Ctrl + Alt + F10 e reabra o GazeMagnet." :
+                !emergencyRegistered ? EmergencyUnavailable :
                 !confirmed.Checked ? "Confirme a calibração e desligue o controle nativo do mouse." :
                 "Aguarde coordenadas válidas da API antes de assumir o cursor.";
             return;
@@ -257,6 +277,7 @@ internal sealed partial class MainForm : Form
         resumeAfterReconnect = false;
         armed = true;
         arm.Text = "Pausar cursor";
+        RefreshConnectionFields();
         controlStatus.Text = manualMovement ? ManualMovementMessage : ArmedMessage;
     }
 
@@ -272,6 +293,11 @@ internal sealed partial class MainForm : Form
     private void Tick()
     {
         long now = Environment.TickCount64;
+        if (UsingNativeCursor && armed)
+        {
+            TickNativeCursor(now);
+            return;
+        }
         GazeSample? gaze = ValidGaze(now);
         if (authorized)
             connectionStatus.Text = gaze != null ? "API conectada · recebendo coordenadas do olhar." :
@@ -290,38 +316,11 @@ internal sealed partial class MainForm : Form
 
         var stability = (GazeStability)gazeStability.SelectedIndex;
         Point point = demo.Checked ? cursor : gazeStabilizer.Update(gaze!.Position!.Value, gaze.ReceivedAt, stability);
-        int searchRadius = (int)radius.Value;
-        nint window = showTargets ? Native.RootAt(point) : 0;
-        if (showTargets && showSearchArea.Checked)
-            searchAreaOverlay.Display(point, searchRadius);
-        scanner.SetWindow(window);
-        if (lastWindow != window)
-        {
-            ResetTarget();
-            lastWindow = window;
-        }
-
         bool keepOnTargets = armed && magnetic.Checked && targetsOnly.Checked;
-        Point destination = point;
-        Target? lockedTarget = null;
-        Target? candidate = null;
-        TargetSnapshot? snapshot = scanner.Latest;
-        if (showTargets && snapshot != null && snapshot.Window == window &&
-            snapshot.Limits == sizeLimits && now - snapshot.CapturedAt <= 900)
-        {
-            var (target, fixedOnTarget) = magnet.Update(snapshot.Targets, point, demo.Checked ? now : gaze!.ReceivedAt,
-                searchRadius, (int)dwell.Value, (int)hysteresis.Value, keepOnTargets);
-            lockedTarget = VisibleTarget(magnet.LockedTarget, window);
-            if (!fixedOnTarget)
-                candidate = VisibleTarget(target, window);
-            if (lockedTarget != null)
-                destination = lockedTarget.Center;
-        }
-        else
-        {
-            magnet.Reset();
-            previousGaze = null;
-        }
+        int searchRadius = (int)radius.Value;
+        var (lockedTarget, candidate, window) = SelectTargets(point, now, demo.Checked ? now : gaze!.ReceivedAt,
+            showTargets, keepOnTargets);
+        Point destination = lockedTarget?.Center ?? point;
 
         if (demo.Checked)
         {
@@ -365,6 +364,33 @@ internal sealed partial class MainForm : Form
         DisplayTargets(lockedTarget, candidate, progress, pulse);
     }
 
+    private (Target? Locked, Target? Candidate, nint Window) SelectTargets(
+        Point point, long now, long sampleAt, bool showTargets, bool keepOnTargets)
+    {
+        nint window = showTargets ? Native.RootAt(point) : 0;
+        if (showTargets && showSearchArea.Checked)
+            searchAreaOverlay.Display(point, (int)radius.Value);
+        scanner.SetWindow(window);
+        if (lastWindow != window)
+        {
+            ResetTarget();
+            lastWindow = window;
+        }
+
+        TargetSnapshot? snapshot = scanner.Latest;
+        if (showTargets && snapshot != null && snapshot.Window == window &&
+            snapshot.Limits == sizeLimits && now - snapshot.CapturedAt <= 900)
+        {
+            var (target, fixedOnTarget) = magnet.Update(snapshot.Targets, point, sampleAt,
+                (int)radius.Value, (int)dwell.Value, (int)hysteresis.Value, keepOnTargets);
+            return (VisibleTarget(magnet.LockedTarget, window), fixedOnTarget ? null : VisibleTarget(target, window), window);
+        }
+
+        magnet.Reset();
+        previousGaze = null;
+        return (null, null, window);
+    }
+
     private bool MoveCursor(Point cursor, Point point, Point destination, bool locked)
     {
         // Evita microdeslocamentos entre alvos, mas vai ao centro exato ao prender.
@@ -390,7 +416,7 @@ internal sealed partial class MainForm : Form
         if (mode == GazeClickMode.Off)
         {
             mouseActivity.Dispose();
-            clickStatus.Text = clickShortcutRegistered
+            clickStatus.Text = UsingNativeCursor ? "Clique pelo olhar disponível apenas no modo com API." : clickShortcutRegistered
                 ? "Desligado. Ctrl + Alt + F11 pausa ou retoma o clique pelo olhar."
                 : "Desligado. Use o seletor Modo.";
             return;
@@ -482,7 +508,7 @@ internal sealed partial class MainForm : Form
 
     private Target? VisibleTarget(Target? target, nint window) =>
         target != null && Native.RootAt(target.Center) == window &&
-        (demo.Checked || Screen.PrimaryScreen?.Bounds.Contains(target.Center) == true) ? target : null;
+        (demo.Checked || UsingNativeCursor || Screen.PrimaryScreen?.Bounds.Contains(target.Center) == true) ? target : null;
 
     private bool TryQueueEnterClick()
     {
@@ -505,8 +531,11 @@ internal sealed partial class MainForm : Form
     }
 
     private bool CanClickWithEnter((Target Target, nint Window) request) =>
-        !closing && IsHandleCreated && enterClicksTarget.Checked && armed && !manualMovement &&
-        ValidGaze(Environment.TickCount64) is { } gaze && gaze.ReceivedAt >= holdUntil &&
+        !closing && IsHandleCreated && enterClicksTarget.Checked && armed &&
+        (UsingNativeCursor
+            ? rawMouseRegistered && Environment.TickCount64 >= physicalHoldUntil &&
+                Environment.TickCount64 - lastExternalMovement < CursorIdleMs && visibleSnap == request.Target
+            : !manualMovement && ValidGaze(Environment.TickCount64) is { } gaze && gaze.ReceivedAt >= holdUntil) &&
         !Native.ModifierDown() && !Native.MouseButtonDown() &&
         Cursor.Position == request.Target.Center && Native.RootAt(request.Target.Center) == request.Window;
 
@@ -618,11 +647,13 @@ internal sealed partial class MainForm : Form
     private void Pause(string message)
     {
         armed = false;
+        ReleaseRawMouse();
         resumeAfterReconnect = false;
         gazeRecovery.Reset();
-        arm.Text = "Assumir cursor";
+        arm.Text = UsingNativeCursor ? "Ativar magnetismo" : "Assumir cursor";
         StopTargetSearch();
         controlStatus.Text = message;
+        RefreshConnectionFields();
     }
 
     private void StopTargetSearch()
@@ -643,6 +674,7 @@ internal sealed partial class MainForm : Form
         closing = true;
         timer.Dispose();
         connection?.Cancel();
+        ReleaseRawMouse();
         mouseActivity.Dispose();
         enterClickShortcut.Dispose();
         scanner.Dispose();

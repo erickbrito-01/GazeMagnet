@@ -180,6 +180,13 @@ internal sealed class DashboardButton(DashboardGlyph glyph, bool emergency = fal
 {
     private bool hovered;
     private bool pressed;
+    private string? hintText = hint;
+
+    public void SetHint(string text)
+    {
+        hintText = text;
+        Invalidate();
+    }
 
     protected override void OnCreateControl()
     {
@@ -222,7 +229,7 @@ internal sealed class DashboardButton(DashboardGlyph glyph, bool emergency = fal
             emergency ? DashboardStyle.Red : DashboardStyle.Text);
         var area = new Rectangle(left + icon + gap, 0, Math.Max(0, Width - left - icon - gap - 5), Height);
         var flags = TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis;
-        if (hint == null)
+        if (hintText == null)
         {
             TextRenderer.DrawText(g, Text, Font, area, DashboardStyle.Text, flags);
             return;
@@ -231,7 +238,7 @@ internal sealed class DashboardButton(DashboardGlyph glyph, bool emergency = fal
         TextRenderer.DrawText(g, Text, Font, area, DashboardStyle.Text, flags);
         area.Y = Height / 2 - (int)(2 * scale);
         area.Height = Height - area.Y;
-        TextRenderer.DrawText(g, hint, DashboardStyle.Small, area, DashboardStyle.Accent, flags);
+        TextRenderer.DrawText(g, hintText, DashboardStyle.Small, area, DashboardStyle.Accent, flags);
     }
 }
 

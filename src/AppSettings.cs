@@ -10,6 +10,8 @@ internal sealed record AppSettings
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GazeMagnet", "settings.json");
 
     public bool? AutoConnection { get; init; }
+    public EmergencyShortcut? EmergencyShortcut { get; init; }
+    public bool? UseNativeCursor { get; init; }
     public int? ManualPort { get; init; }
     public string? ProtectedKey { get; init; }
     public int? Radius { get; init; }

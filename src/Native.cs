@@ -10,7 +10,7 @@ internal static class Native
     public const nuint GazeClickMarker = 0x474D434B;
     private const uint LeftDown = 0x0002;
     private const uint LeftUp = 0x0004;
-    private const uint CtrlAltNoRepeat = 0x4003;
+    private const uint NoRepeat = 0x4000;
     public const int NoActivate = 0x08000000;
     public const int Transparent = 0x20;
     public const int ToolWindow = 0x80;
@@ -84,10 +84,10 @@ internal static class Native
         return sent == 2;
     }
 
-    public static bool RegisterShortcut(nint window, int id, Keys key) =>
-        RegisterHotKey(window, id, CtrlAltNoRepeat, (uint)key) != 0;
+    public static bool RegisterShortcut(nint window, int id, Keys key, uint modifiers = 3) =>
+        RegisterHotKey(window, id, modifiers | NoRepeat, (uint)key) != 0;
 
-    public static void UnregisterShortcut(nint window, int id) => UnregisterHotKey(window, id);
+    public static bool UnregisterShortcut(nint window, int id) => UnregisterHotKey(window, id) != 0;
 
     public static bool ModifierDown() =>
         Down(Keys.ControlKey) || Down(Keys.ShiftKey) || Down(Keys.Menu) ||

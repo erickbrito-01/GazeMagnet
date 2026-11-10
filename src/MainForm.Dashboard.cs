@@ -6,12 +6,18 @@ internal sealed partial class MainForm
 {
     private readonly Panel viewport = new() { Dock = DockStyle.Fill, AutoScroll = true };
     private readonly Panel dashboardPage = new() { Margin = Padding.Empty };
-    private readonly DashboardButton emergency = new(DashboardGlyph.Alert, true, "Ctrl + Alt + F10")
+    private readonly DashboardButton emergency = new(DashboardGlyph.Alert, true, EmergencyShortcut.Default.ToString())
     {
         Text = "Parada de emergência",
         Font = DashboardStyle.Action,
         Cursor = Cursors.Hand
     };
+    private readonly Button changeEmergencyShortcut = new()
+    {
+        Text = "Alterar atalho", Font = DashboardStyle.Small, FlatStyle = FlatStyle.Flat,
+        BackColor = DashboardStyle.Card, ForeColor = DashboardStyle.Text, Cursor = Cursors.Hand
+    };
+    private readonly Label emergencyShortcutStatus = new();
 
     private readonly Label apiHeadline = DashboardText("", DashboardStyle.Action);
     private readonly Label apiDetail = DashboardText("", DashboardStyle.Small, DashboardStyle.Muted);
@@ -57,6 +63,9 @@ internal sealed partial class MainForm
         gazeStability.Items.AddRange(["Desligado", "Leve", "Médio", "Forte"]);
         gazeStability.SelectedIndex = (int)GazeStability.Medium;
         StyleChoiceField(gazeStability);
+        cursorSourceChoice.Items.AddRange(["GazeFlowAPI", "Cursor do GazePointer (sem API)"]);
+        cursorSourceChoice.SelectedIndex = 0;
+        StyleChoiceField(cursorSourceChoice);
 
         SetStatusLabel(connectionStatus, "Abra o GazePointer e clique em Conectar.");
         SetStatusLabel(clickStatus, "Desligado. Ctrl + Alt + F11 pausa ou retoma o clique pelo olhar.");
@@ -67,16 +76,17 @@ internal sealed partial class MainForm
         var platform = DashboardText("GAZEPOINTER / WINDOWS", DashboardStyle.Action, DashboardStyle.Muted);
         header.Controls.AddRange([brand, platform, apiDot, apiHeadline, apiDetail]);
 
-        var connectionCard = new DashboardCard("1. Conexão", "Conecte aqui o GazeMagnet ao GazePointer.", DashboardGlyph.Link);
+        var connectionCard = new DashboardCard("1. Conexão", "Escolha como receber a posição do olhar.", DashboardGlyph.Link);
         var magnetCard = new DashboardCard("2. Magnetismo", "Ajuste a fixação e os limites de tamanho dos alvos.", DashboardGlyph.Magnet);
         var clickCard = new DashboardCard("3. Clique pelo olhar", "Defina o modo e o tempo de permanência no alvo.", DashboardGlyph.Mouse);
         var cursorCard = new DashboardCard("4. Controle do cursor", "Assuma o controle do cursor com o olhar.", DashboardGlyph.Cursor);
         dashboardPage.Controls.AddRange([header, connectionCard, magnetCard, clickCard, cursorCard]);
 
         var portField = new DashboardField("Porta local", port);
+        var sourceField = new DashboardField("Fonte da posição", cursorSourceChoice);
         var keyField = new DashboardField("Chave da API", key);
         var connectionLine = Divider();
-        connectionCard.Controls.AddRange([autoConnection, portField, keyField, connect, connectionLine, connectionIcon, connectionStatus]);
+        connectionCard.Controls.AddRange([sourceField, autoConnection, portField, keyField, connect, connectionLine, connectionIcon, connectionStatus]);
 
         var radiusField = new DashboardField("Raio (px)", radius, Help("Raio (px)", "Até que distância da borda de um botão ou link o olhar\nconsegue atrair o cursor. Um raio maior alcança alvos\nmais distantes."));
         var dwellField = new DashboardField("Fixação (ms)", dwell, Help("Fixação (ms)", "Quanto tempo o olhar precisa ficar no mesmo alvo para\no cursor grudar. Por exemplo, 320 ms é cerca de um\nterço de segundo."));
@@ -102,7 +112,11 @@ internal sealed partial class MainForm
 
         var cursorLine = Divider();
         var calibrationHelp = Help("Calibração", "Marque depois de calibrar o olhar no GazePointer e\ndesligar o botão Control Mouse Cursor nele. Assim, só\no GazeMagnet controla o cursor pelo olhar.");
-        cursorCard.Controls.AddRange([confirmed, calibrationHelp, arm, emergency, cursorLine, cursorIcon, controlStatus]);
+        SetStatusLabel(emergencyShortcutStatus, "");
+        changeEmergencyShortcut.FlatAppearance.BorderColor = DashboardStyle.Border;
+        changeEmergencyShortcut.Click += (_, _) => EditEmergencyShortcut();
+        cursorCard.Controls.AddRange([confirmed, calibrationHelp, arm, emergency,
+            emergencyShortcutStatus, changeEmergencyShortcut, cursorLine, cursorIcon, controlStatus]);
 
         void UpdateButtonHelp()
         {
@@ -115,6 +129,8 @@ internal sealed partial class MainForm
             buttonHelp.SetToolTip(arm, arm.Text switch
             {
                 "Assumir cursor" => "Depois de confirmar a calibração, permite mover o cursor com o olhar.",
+                "Ativar magnetismo" => "Encaixa em controles próximos ao ponteiro do GazePointer.",
+                "Pausar magnetismo" => "Interrompe os encaixes do GazeMagnet. O GazePointer pode continuar a mover o cursor.",
                 "Cancelar retomada" => "Mantém o cursor manual quando a API voltar.",
                 _ => "Pausa o controle pelo olhar e devolve o cursor ao mouse."
             });
@@ -123,7 +139,7 @@ internal sealed partial class MainForm
         connect.TextChanged += (_, _) => UpdateButtonHelp();
         arm.TextChanged += (_, _) => UpdateButtonHelp();
         UpdateButtonHelp();
-        buttonHelp.SetToolTip(emergency, "Interrompe o controle e o clique pelo olhar. Atalho Ctrl + Alt + F10.");
+        buttonHelp.SetToolTip(changeEmergencyShortcut, "Pause o controle para escolher outro atalho de emergência.");
         Deactivate += (_, _) => fieldHelp.Hide(this);
         Disposed += (_, _) =>
         {
@@ -144,6 +160,7 @@ internal sealed partial class MainForm
             Arrange();
         };
         Shown += (_, _) => Arrange();
+        cursorSourceChoice.SelectedIndexChanged += (_, _) => Arrange();
 
         RefreshDashboard();
         Arrange();
@@ -176,12 +193,12 @@ internal sealed partial class MainForm
                 int top = wide ? 109 : 145;
                 int topHeight = MagnetHeight(rightWidth);
                 const int bottomHeight = 210;
-                int connectionHeight = wide ? topHeight : 264;
+                int connectionHeight = wide ? topHeight : 321;
                 int magnetY = wide ? top : top + connectionHeight + gap;
                 int clickY = magnetY + topHeight + gap;
                 int cursorY = wide ? clickY : clickY + bottomHeight + gap;
                 bool stackedActions = rightWidth < 465;
-                int cursorHeight = bottomHeight + (stackedActions ? 56 : 0);
+                int cursorHeight = CursorPanelHeight(rightWidth);
                 int footerY = cursorY + cursorHeight + 17;
 
                 int footerHeight = width >= 1080 ? 54 : 98;
@@ -202,18 +219,20 @@ internal sealed partial class MainForm
                 Place(magnetCard, rightX, magnetY, rightWidth, topHeight);
                 Place(clickCard, edge, clickY, leftWidth, bottomHeight);
                 Place(cursorCard, rightX, cursorY, rightWidth, cursorHeight);
-                Place(footer, 0, footerY, width, height - footerY);
+                footer.SetBounds(0, Px(footerY), dashboardPage.Width, dashboardPage.Height - Px(footerY));
 
                 const int inset = 22;
                 int left = leftWidth - inset * 2;
                 int right = rightWidth - inset * 2;
                 int portWidth = (left - gap) * 38 / 100;
-                Place(autoConnection, inset, 72, left, 25);
-                Place(portField, inset, 103, portWidth, 54);
-                Place(keyField, inset + portWidth + gap, 103, left - portWidth - gap, 54);
-                Place(connect, inset, 164, left, 43);
-                Place(connectionLine, inset, 218, left, 1);
-                StatusRow(connectionIcon, connectionStatus, inset, 222, left, 40);
+                Place(sourceField, inset, 72, left, 54);
+                Place(autoConnection, inset, 129, left, 25);
+                Place(portField, inset, 160, portWidth, 54);
+                Place(keyField, inset + portWidth + gap, 160, left - portWidth - gap, 54);
+                Place(connect, inset, 221, left, 43);
+                int connectionStatusY = UsingNativeCursor ? 140 : 279;
+                Place(connectionLine, inset, connectionStatusY - 4, left, 1);
+                StatusRow(connectionIcon, connectionStatus, inset, connectionStatusY, left, UsingNativeCursor ? 68 : 40);
 
                 DashboardField[] magnetFields = [radiusField, dwellField, hysteresisField, widthField, heightField, stabilityField];
                 int columns = MagnetColumns(rightWidth);
@@ -244,7 +263,10 @@ internal sealed partial class MainForm
                 Place(arm, inset, 112, armWidth, 49);
                 Place(emergency, stackedActions ? inset : inset + armWidth + gap, stackedActions ? 168 : 112,
                     stackedActions ? right : right - armWidth - gap, 49);
-                int lineY = stackedActions ? 228 : 172;
+                int shortcutY = stackedActions ? 223 : 167;
+                Place(emergencyShortcutStatus, inset, shortcutY, right - 120, 39);
+                Place(changeEmergencyShortcut, inset + right - 112, shortcutY + 4, 112, 30);
+                int lineY = shortcutY + 44;
                 Place(cursorLine, inset, lineY, right, 1);
                 StatusRow(cursorIcon, controlStatus, inset, lineY + 4, right, 34);
                 ArrangeFooter(width);
@@ -262,12 +284,14 @@ internal sealed partial class MainForm
     {
         int contentWidth = width - (wide ? 40 : 28);
         int right = wide ? contentWidth - 14 - (contentWidth - 14) * 47 / 100 : contentWidth;
-        int cursorHeight = right < 465 ? 266 : 210;
+        int cursorHeight = CursorPanelHeight(right);
         int magnetHeight = MagnetHeight(right);
         int footerHeight = width >= 1080 ? 54 : 98;
         return wide ? 109 + magnetHeight + 14 + cursorHeight + 17 + footerHeight
-            : 145 + 264 + 14 + magnetHeight + 14 + 210 + 14 + cursorHeight + 17 + footerHeight;
+            : 145 + 321 + 14 + magnetHeight + 14 + 210 + 14 + cursorHeight + 17 + footerHeight;
     }
+
+    private static int CursorPanelHeight(int width) => width < 465 ? 307 : 251;
 
     private static int MagnetColumns(int cardWidth) => cardWidth < 452 ? 2 : 3;
 
@@ -345,6 +369,7 @@ internal sealed partial class MainForm
 
     private void RefreshDashboard()
     {
+        changeEmergencyShortcut.Enabled = CanEditEmergencyShortcut;
         long now = Environment.TickCount64;
         GazeSample? sample = authorized ? ValidGaze(now) : null;
         bool receiving = sample != null;
@@ -360,11 +385,22 @@ internal sealed partial class MainForm
         footerApi.Text = receiving ? "Rastreamento conectado"
             : authorized ? "Aguardando sinal" : reconnecting ? "Reconectando…"
             : connection != null ? "Conectando…" : "API desconectada";
+        if (UsingNativeCursor)
+        {
+            apiHeadline.Text = "Cursor do GazePointer";
+            apiDetail.Text = "Modo sem API.";
+            footerApi.Text = "Sem API";
+        }
         bool waiting = resumeAfterReconnect || (armed && controlStatus.Text == WaitingForGazeMessage);
         bool cursorActive = armed && !waiting && !manualMovement &&
             now >= holdUntil && sample?.ReceivedAt >= holdUntil;
+        if (UsingNativeCursor)
+        {
+            waiting = armed && searchPoint == null;
+            cursorActive = armed && !waiting;
+        }
         cursorState.Text = demo.Checked ? "Demonstração" : waiting ? "Aguardando" : cursorActive ? "Ativo" : "Pausado";
-        cursorSource.Text = cursorActive ? "Cursor pelo olhar" : "Cursor manual";
+        cursorSource.Text = UsingNativeCursor ? "Cursor do GazePointer" : cursorActive ? "Cursor pelo olhar" : "Cursor manual";
         DashboardGlyph stateGlyph = cursorActive ? DashboardGlyph.Check
             : waiting ? DashboardGlyph.Dot : DashboardGlyph.Pause;
         cursorIcon.SetGlyph(stateGlyph);

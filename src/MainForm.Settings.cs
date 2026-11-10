@@ -2,9 +2,8 @@ namespace GazeMagnet;
 
 internal sealed partial class MainForm
 {
-    private void RestoreSettings()
+    private void RestoreSettings(AppSettings settings)
     {
-        AppSettings settings = AppSettings.Load(settingsPath);
         manualPort = Math.Clamp(settings.ManualPort ?? manualPort, (int)port.Minimum, (int)port.Maximum);
         manualKey = settings.ReadManualKey();
         autoConnection.Checked = settings.AutoConnection ?? autoConnection.Checked;
@@ -25,6 +24,8 @@ internal sealed partial class MainForm
         showSearchArea.Checked = settings.ShowSearchArea ?? showSearchArea.Checked;
         demo.Checked = settings.Demo ?? demo.Checked;
         enterClicksTarget.Checked = settings.EnterClicksTarget ?? enterClicksTarget.Checked;
+        if (settings.UseNativeCursor == true)
+            cursorSourceChoice.SelectedIndex = 1;
     }
 
     private static void RestoreNumber(NumericUpDown field, decimal? value)
@@ -39,6 +40,8 @@ internal sealed partial class MainForm
         new AppSettings
         {
             AutoConnection = automatic,
+            EmergencyShortcut = preferredEmergencyShortcut,
+            UseNativeCursor = UsingNativeCursor,
             ManualPort = automatic ? manualPort : (int)port.Value,
             ProtectedKey = AppSettings.ProtectManualKey(automatic ? manualKey : key.Text),
             Radius = (int)radius.Value,
