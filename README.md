@@ -67,3 +67,7 @@ dotnet run --project .\src\GazeMagnet.csproj
 ## Créditos
 
 O GazeMagnet foi desenvolvido por **Erick Brito** com ajuda de IA. O rastreamento ocular vem do [GazePointer](https://sourceforge.net/projects/gazepointer/), publicado no SourceForge por **szydej**. O GazePointer é instalado separadamente.
+
+## Licença
+
+O código e a documentação do GazeMagnet são disponibilizados sob a [licença MIT](LICENSE). O GazePointer e os componentes de terceiros mantêm suas próprias licenças.
