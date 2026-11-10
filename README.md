@@ -18,6 +18,8 @@ O GazeMagnet é um projeto experimental de acessibilidade desenvolvido com ajuda
 4. Se o GazePointer mostrar um pedido de acesso, confira o pedido e clique em **Allow** para autorizar. Aguarde o GazeMagnet indicar que está recebendo coordenadas.
 5. Em **4. Controle do cursor**, confirme que fez a calibração e desligou o controle de cursor no GazePointer. Clique em **Assumir cursor**. Para devolver o controle ao mouse a qualquer momento, use **Ctrl + Alt + F12** ou **Parada de emergência**.
 
+O executável desta versão está sem assinatura digital. O Windows pode exibir um aviso do SmartScreen. Para conferir a integridade do download, compare o resultado de `Get-FileHash .\GazeMagnet.exe -Algorithm SHA256` com o SHA-256 na página da release. [Como o SmartScreen avalia downloads](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation)
+
 ## Usar o magnetismo e o clique
 
 - **Amarelo tracejado** indica um candidato. **Verde contínuo** indica que o cursor já grudou no alvo.

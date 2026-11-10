@@ -38,7 +38,7 @@ A mesma posição suavizada move o cursor livre, orienta a mira e a busca de alv
 
 ### Usar com o olhar
 
-Veja a [configuração da porta local e da chave da API](README.md#conectar-ao-gazepointer).
+Veja a [configuração da porta local e da chave da API](README.md#porta-local-chave-e-reconex%C3%A3o).
 
 1. Abra uma única instância do [GazePointer](https://sourceforge.net/projects/gazepointer/) e calibre o olhar no monitor principal.
 2. Na barra inferior do GazePointer, deixe o botão com ícone de ponteiro, **Control Mouse Cursor**, desativado. Mantenha o rastreamento ligado. Desative também o marcador de olhar pelo botão com ícone de olho. Quando esse marcador fica sobre um controle, ele pode encobrir o alvo.
